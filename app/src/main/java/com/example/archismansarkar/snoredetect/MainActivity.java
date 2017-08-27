@@ -16,6 +16,9 @@ import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.Buffer;
 
 public class MainActivity extends AppCompatActivity {
@@ -108,11 +111,35 @@ public class MainActivity extends AppCompatActivity {
         }, "AudioRecorder Thread");
         recordingThread.start();
     }
+
+    //Conversion of short to byte
+    private byte[] short2byte(short[] sData) {
+        int shortArrsize = sData.length;
+        byte[] bytes = new byte[shortArrsize * 2];
+
+        for (int i = 0; i < shortArrsize; i++) {
+            bytes[i * 2] = (byte) (sData[i] & 0x00FF);
+            bytes[(i * 2) + 1] = (byte) (sData[i] >> 8);
+            sData[i] = 0;
+        }
+        return bytes;
+    }
+
     private void writeAudioDataToFile() {
 
         short sData[] = new short[BufferElements2Rec];
+        String filePath = "/sdcard/8k16bitMono.pcm";
+
+        FileOutputStream os = null;
+        try {
+            os = new FileOutputStream(filePath);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
         while (isRecording) {
             recorder.read(sData, 0, BufferElements2Rec);
+
             for(int x=0; x<BufferElements2Rec; x++) {
                 Log.d("AudioData ", String.valueOf(sData[x]));
 
@@ -124,6 +151,22 @@ public class MainActivity extends AppCompatActivity {
                     decibel = 20.0*Math.log10(data/65535.0);
                 }
             }
+
+            try {
+                // writes the data to file from buffer stores the voice buffer
+                byte bData[] = short2byte(sData);
+
+                os.write(bData, 0, BufferElements2Rec * BytesPerElement);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            os.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
